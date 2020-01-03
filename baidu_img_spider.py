@@ -5,6 +5,7 @@ import threading
 import queue
 import time
 import os
+import argparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -79,13 +80,17 @@ def retrieve_li_tags(html_text):
     # parses the html text
     soup = BeautifulSoup(html_text, 'html.parser')
 
-    # finds the div tag whose id is imgid, which contains all urls and exts of the images
-    div_imgid = soup.find('div', id='imgid')
+    try:
+        # finds the div tag whose id is imgid, which contains all urls and exts of the images
+        div_imgid = soup.find('div', id='imgid')
 
-    # finds all li tags from the div tags, each of which reprs an image
-    li_tags = div_imgid.find_all('li')
-
-    return li_tags
+        # finds all li tags from the div tags, each of which reprs an image
+        li_tags = div_imgid.find_all('li')
+    except:
+        print("baidu_img_spider.py: error: no image scratched")
+        exit(1)
+    else:
+        return li_tags
 
 
 class ImgUrlNExtRetrievingThread(threading.Thread):
@@ -246,9 +251,13 @@ if __name__ == '__main__':
     # creates a lock to ensure that the count var is modified only by one thread at a time
     count_lock = threading.Lock()
 
-    # img_key_word = input("input keywords of the images you want to scratch:")
-    img_key_word = "和泉纱雾"
-    # root = input("input the path where the images are to be stored")
-    root = ""
+    parser = argparse.ArgumentParser(description="baidu_img_spider - a baidu image spider")
+    parser.add_argument("--key-word", "-k", action="store", required=True, help="key word of images")
+    parser.add_argument("--number", "-n", action="store", default=300, type=int,
+                        help="number of images to be scratched, 300 by default")
+    parser.add_argument("--save-dir", "-d", action="store", default=os.getcwd(),
+                        help="directory for storing images, current directory by default")
 
-    baidu_img_spider("和泉纱雾", "", 300)
+    args = parser.parse_args()
+
+    baidu_img_spider(args.key_word, args.save_dir, args.number)
