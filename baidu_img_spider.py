@@ -30,7 +30,7 @@ def make_img_dir(root, img_key_word):
 
 
 def generate_url(img_key_word):
-    print("generating the url displaying imgs to be scratched")
+    print("generating url displaying imgs to be scratched")
 
     # generates the url containing images to be scratched
     url = "https://image.baidu.com/search/index?tn=baiduimage&word={}".format(img_key_word)
@@ -40,7 +40,7 @@ def generate_url(img_key_word):
     return url
 
 
-def load_imgs(url):
+def load_imgs(url, img_num):
     print("loading imgs on {}".format(url))
 
     # starts a web driver
@@ -53,24 +53,29 @@ def load_imgs(url):
     time.sleep(3)
 
     # simulates dragging pages down
-    for i in range(50):
+    img_count = 0
+    li_tags = []  # stores li tags, each of which reprs an img
+    while img_count < img_num:
         ActionChains(driver).send_keys(Keys.END).perform()
         time.sleep(1)
+
+        # gets the current html text
+        html_text = driver.page_source
+
+        # gets all li tags
+        li_tags = retrieve_li_tags(html_text)
+
+        img_count = len(li_tags)
 
     # waits for a moment so that the page can be loaded completely
     time.sleep(5)
 
-    # gets the html text
-    html_text = driver.page_source
-
     print("done")
 
-    return html_text
+    return li_tags
 
 
 def retrieve_li_tags(html_text):
-    print("retrieving li tags")
-
     # parses the html text
     soup = BeautifulSoup(html_text, 'html.parser')
 
@@ -79,8 +84,6 @@ def retrieve_li_tags(html_text):
 
     # finds all li tags from the div tags, each of which reprs an image
     li_tags = div_imgid.find_all('li')
-
-    print("done")
 
     return li_tags
 
@@ -108,13 +111,14 @@ class ImgUrlNExtRetrievingThread(threading.Thread):
 
 
 class ImgDownloadingThread(threading.Thread):
-    def __init__(self, name, img_url_ext_queue, root, img_key_word, img_dir):
+    def __init__(self, name, img_url_ext_queue, root, img_key_word, img_dir, img_num):
         super(ImgDownloadingThread, self).__init__()
         self.name = name
         self.img_url_ext_queue = img_url_ext_queue
         self.root = root
         self.img_key_word = img_key_word
         self.img_dir = img_dir
+        self.img_num = img_num
 
         self.img_url_ext = None
         self.img_url = None
@@ -143,13 +147,12 @@ class ImgDownloadingThread(threading.Thread):
         self.get_img_path()
 
         # saves the img
-        self.save_img()
+        if self.img_content:
+            self.save_img()
 
     def get_img_content(self):
-        r = None
-
         try:
-            r = requests.get(self.img_url, timeout=5)
+            r = requests.get(self.img_url, timeout=10)
             r.raise_for_status()
             self.img_content = r.content
         except:
@@ -162,19 +165,25 @@ class ImgDownloadingThread(threading.Thread):
     def save_img(self):
         global count
 
-        with open(self.img_path, "wb") as f:
-            f.write(self.img_content)
-            print("a(n) {} img is saved. {} in total now".format(self.img_ext, count))
-
         # increases count by 1
         count_lock.acquire()
 
-        count += 1
+        try:
+            if count >= self.img_num:
+                exit(0)
 
-        count_lock.release()
+            with open(self.img_path, "wb") as f:
+                f.write(self.img_content)
+                print("a(n) {} img is saved. {} in total now".format(self.img_ext, count + 1))
+
+                count += 1
+        except:
+            pass
+        finally:
+            count_lock.release()
 
 
-def create_threads(li_tags, img_url_ext_queue, root, img_key_word, img_dir):
+def create_threads(li_tags, img_url_ext_queue, root, img_key_word, img_dir, img_num):
     # creates a thread for storing (url of the img, ext of the img) retrieved from the li tags
     img_url_ext_retrieving_thread = ImgUrlNExtRetrievingThread("img_url_ext_retrieving_thread", li_tags,
                                                                img_url_ext_queue)
@@ -182,7 +191,7 @@ def create_threads(li_tags, img_url_ext_queue, root, img_key_word, img_dir):
     img_downloading_thread_list = []
     for i in range(6):
         img_downloading_thread = ImgDownloadingThread("img_download_thread {}".format(i + 1), img_url_ext_queue, root,
-                                                      img_key_word, img_dir)
+                                                      img_key_word, img_dir, img_num)
         img_downloading_thread_list.append(img_downloading_thread)
 
     return img_url_ext_retrieving_thread, img_downloading_thread_list
@@ -202,7 +211,7 @@ def join_threads(img_url_ext_retrieving_thread, img_downloading_thread_list):
         img_downloading_thread.join()
 
 
-def baidu_img_spider(img_key_word, root):
+def baidu_img_spider(img_key_word, root, img_num):
     # makes a dir to store imgs
     img_dir = make_img_dir(root, img_key_word)
 
@@ -210,20 +219,17 @@ def baidu_img_spider(img_key_word, root):
     url = generate_url(img_key_word)
 
     # loads images
-    html_text = load_imgs(url)
+    li_tags = load_imgs(url, img_num)
 
     # creates a queue for storing (url of the image, extension of the image)
     img_url_ext_queue = queue.Queue()
-
-    # retrieves all li tags
-    lis = retrieve_li_tags(html_text)
 
     print("start downloading imgs")
 
     # creates a thread for retrieving (url of the image, extension of the image) from each li tag
     # and some threads for downloading images using the image urls
-    img_url_ext_retrieving_thread, img_downloading_thread_list = create_threads(lis, img_url_ext_queue, root,
-                                                                                img_key_word, img_dir)
+    img_url_ext_retrieving_thread, img_downloading_thread_list = create_threads(li_tags, img_url_ext_queue, root,
+                                                                                img_key_word, img_dir, img_num)
     # starts the threads
     start_threads(img_url_ext_retrieving_thread, img_downloading_thread_list)
 
@@ -245,4 +251,4 @@ if __name__ == '__main__':
     # root = input("input the path where the images are to be stored")
     root = ""
 
-    baidu_img_spider("和泉纱雾", "")
+    baidu_img_spider("和泉纱雾", "", 300)
