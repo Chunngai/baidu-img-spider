@@ -237,6 +237,15 @@ def baidu_img_spider(img_key_word, root, img_num):
     print("done. {} imgs are downloaded".format(count))
 
 
+def validate_dir(input_save_dir):
+    if not os.path.exists(input_save_dir):
+        raise argparse.ArgumentTypeError("directory not exists")
+    if not os.path.isdir(input_save_dir):
+        raise argparse.ArgumentTypeError("not a directory")
+
+    return input_save_dir
+
+
 if __name__ == '__main__':
     # counts how many images are saved
     count = 0
@@ -247,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument("--key-word", "-k", action="store", required=True, help="key word of images")
     parser.add_argument("--number", "-n", action="store", default=300, type=int,
                         help="number of images to be scratched, 300 by default")
-    parser.add_argument("--save-dir", "-d", action="store", default=os.getcwd(),
+    parser.add_argument("--save-dir", "-d", action="store", default=os.getcwd(), type=validate_dir,
                         help="directory for storing images, current directory by default")
 
     args = parser.parse_args()
