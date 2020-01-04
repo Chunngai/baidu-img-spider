@@ -25,19 +25,25 @@ def make_img_dir(root, img_key_word):
         os.mkdir(img_dir)
         print("done")
     except FileExistsError:
-        print("baidu_img_spider.py: error: {} already exists".format(img_dir))
+        print("failed. {} already exists".format(img_dir))
 
     return img_dir
 
 
 def generate_url(img_key_word):
+    print("generating url displaying imgs to be scratched")
+
     # generates the url containing images to be scratched
     url = "https://image.baidu.com/search/index?tn=baiduimage&word={}".format(img_key_word)
+
+    print("done")
 
     return url
 
 
 def load_imgs(url, img_num):
+    print("loading imgs on {}".format(url))
+
     # starts a web driver
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # makes the driver headless
@@ -64,6 +70,8 @@ def load_imgs(url, img_num):
 
     # waits for a moment so that the page can be loaded completely
     time.sleep(5)
+
+    print("done")
 
     return li_tags
 
