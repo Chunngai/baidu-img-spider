@@ -45,12 +45,12 @@ def load_imgs(url, img_num):
 
     # switches to the page displaying images
     driver.get(url)
-    time.sleep(3)
 
     # simulates dragging pages down
     img_count = 0
     li_tags = []  # stores li tags, each of which reprs an img
     while img_count < img_num:
+        # drags down the page
         ActionChains(driver).send_keys(Keys.END).perform()
         time.sleep(1)
 
@@ -60,10 +60,8 @@ def load_imgs(url, img_num):
         # gets all li tags
         li_tags = retrieve_li_tags(html_text)
 
+        # counts the current number of imgs
         img_count = len(li_tags)
-
-    # waits for a moment so that the page can be loaded completely
-    time.sleep(5)
 
     return li_tags
 
@@ -171,7 +169,7 @@ class ImgDownloadingThread(threading.Thread):
 
             with open(self.img_path, "wb") as f:
                 f.write(self.img_content)
-                print("a(n) {} img is saved. {} in total now".format(self.img_ext, count + 1))
+                print("a {} img is saved. {} in total now".format(self.img_ext, count + 1))
 
                 count += 1
         except:
@@ -215,13 +213,15 @@ def baidu_img_spider(img_key_word, root, img_num):
     # generates the url showing images
     url = generate_url(img_key_word)
 
+    print("ready to download images. a moment...")
+
     # loads images
     li_tags = load_imgs(url, img_num)
 
     # creates a queue for storing (url of the image, extension of the image)
     img_url_ext_queue = queue.Queue()
 
-    print("start downloading imgs")
+    print("start downloading images")
 
     # creates a thread for retrieving (url of the image, extension of the image) from each li tag
     # and some threads for downloading images using the image urls
