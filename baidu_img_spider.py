@@ -247,7 +247,7 @@ def validate_dir(input_save_dir):
 
 
 if __name__ == '__main__':
-    err_msg = "baidu_img_spider: error: "
+    err_msg = "baidu_img_spider.py: error: "
 
     # counts how many images are saved
     count = 0
