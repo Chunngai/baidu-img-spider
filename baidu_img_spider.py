@@ -25,7 +25,7 @@ def make_img_dir(root, img_key_word):
         os.mkdir(img_dir)
         print("done")
     except FileExistsError:
-        print("baidu_img_spider.py: error: {} already exists".format(img_dir))
+        print("{}{} already exists".format(err_msg, img_dir))
 
     return img_dir
 
@@ -77,7 +77,7 @@ def retrieve_li_tags(html_text):
         # finds all li tags from the div tags, each of which reprs an image
         li_tags = div_imgid.find_all('li')
     except:
-        print("baidu_img_spider.py: error: no image scratched")
+        print("{}no image scratched".format(err_msg))
         exit(1)
     else:
         return li_tags
@@ -247,6 +247,8 @@ def validate_dir(input_save_dir):
 
 
 if __name__ == '__main__':
+    err_msg = "baidu_img_spider: error: "
+
     # counts how many images are saved
     count = 0
     # creates a lock to ensure that the count var is modified only by one thread at a time
